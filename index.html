@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velvet Rope Growth Agent v2.5</title>
+    
+    <!-- 1. TAILWIND CSS (Styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. REACT LIBRARIES (Development versions are safer for single-file hosting) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- 3. BABEL (Compiles the code right in the browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 4. FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Custom Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 950: '#020617' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #020617; color: #e2e8f0; }
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- MAIN APP LOGIC -->
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+
+        // --- CONFIGURATION ---
+        const apiKey = ""; // Leave empty for Simulation Mode
+
+        // --- ICONS (Internal SVGs to prevent loading errors) ---
+        const Icon = ({ path, color = "currentColor", size = 20, className="" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        // Icon Paths
+        const icons = {
+            Target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
+            Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
+            Users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+            Activity: <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>,
+            Check: <path d="M20 6 9 17l-5-5"/>,
+            X: <path d="M18 6 6 18M6 6l12 12"/>,
+            Zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>,
+            Database: <><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>,
+            TrendingUp: <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>,
+            Mail: <><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>,
+            RefreshCw: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></>,
+            Sparkles: <><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>,
+            ExternalLink: <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></>,
+            Clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+            Send: <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>
+        };
+
+        // --- MOCK DATA ---
+        const LEADS = [
+            { id: 1, name: "Dr. Elena Ross", title: "Chief of Oncology", org: "MSKCC", source: "PubMed", status: "Enriched", waterfall: "Found ✅", hook: "Read your paper on CAR-T efficacy..." },
+            { id: 2, name: "Marcus Thorne", title: "General Partner", org: "Greylock Bio", source: "Crunchbase", status: "Enriched", waterfall: "Found ✅", hook: "Saw your Series B bet in MediGen..." },
+            { id: 3, name: "Sarah Jenkins", title: "VP Strategy", org: "UnitedHealth", source: "Apollo", status: "Enriched", waterfall: "Found ✅", hook: "Noticed UHG's new AI partnership..." }
+        ];
+
+        // --- COMPONENTS ---
+
+        const EmailModal = ({ lead, onClose }) => {
+            if (!lead) return null;
+            const handleSend = () => {
+                window.location.href = `mailto:?subject=Invitation&body=${encodeURIComponent(lead.hook)}`;
+                onClose();
+            };
+            return (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-white rounded-xl w-full max-w-lg text-slate-900 overflow-hidden">
+                        <div className="bg-slate-100 p-4 border-b flex justify-between items-center">
+                            <h3 className="font-bold flex items-center gap-2"><Icon path={icons.Mail} size={16} /> Draft</h3>
+                            <button onClick={onClose}><Icon path={icons.X} size={20} className="text-slate-400 hover:text-slate-700"/></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="text-sm space-y-2">
+                                <div className="flex border-b pb-1"><span className="w-16 text-slate-500">To:</span> <span className="font-mono">{lead.name}</span></div>
+                                <div className="flex border-b pb-1"><span className="w-16 text-slate-500">Subject:</span> <span>Invitation: Elite Oncology Summit</span></div>
+                            </div>
+                            <div className="p-4 bg-purple-50 border-l-4 border-purple-500 rounded text-purple-900 italic text-sm">
+                                "{lead.hook}" <br/> <span className="text-xs font-bold not-italic mt-1 block text-purple-400 uppercase">AI Generated Hook</span>
+                            </div>
+                            <p className="text-slate-600 text-sm">Given your role at {lead.org}, I thought you'd be interested in joining a curated group of 500 leaders...</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
+                            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded">Edit</button>
+                            <button onClick={handleSend} className="px-4 py-2 text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 rounded flex items-center gap-2"><Icon path={icons.Send} size={14}/> Dispatch</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('hunter');
+            const [processing, setProcessing] = useState(false);
+            const [leads, setLeads] = useState(LEADS);
+            const [modalLead, setModalLead] = useState(null);
+
+            const runEnrichment = () => {
+                setProcessing(true);
+                // Simulate AI work
+                setTimeout(() => {
+                    const newId = Math.max(...leads.map(l => l.id)) + 1;
+                    const newLead = { 
+                        id: newId, 
+                        name: "Dr. James Chen", 
+                        title: "Head of Research", 
+                        org: "Mayo Clinic", 
+                        source: "PubMed", 
+                        status: "Enriched ✨", 
+                        waterfall: "Found ✅", 
+                        hook: "Analyzed your latest trial results..." 
+                    };
+                    setLeads([newLead, ...leads]);
+                    setProcessing(false);
+                }, 1500);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col font-sans">
+                    {/* Header */}
+                    <header className="h-16 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between px-6 backdrop-blur-md sticky top-0 z-10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded flex items-center justify-center shadow-lg shadow-purple-500/20">
+                                <Icon path={icons.Zap} className="text-white" size={16} />
+                            </div>
+                            <div>
+                                <h1 className="font-bold text-lg tracking-tight text-white">Velvet Rope <span className="text-purple-400">v2.5</span></h1>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20">
+                            <Icon path={icons.Activity} size={12} /> SYSTEM ACTIVE
+                        </div>
+                    </header>
+
+                    {/* Main */}
+                    <main className="flex-1 max-w-7xl mx-auto w-full p-6 grid grid-cols-12 gap-8">
+                        
+                        {/* Sidebar */}
+                        <nav className="col-span-2 space-y-1">
+                            <button onClick={() => setActiveTab('hunter')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'hunter' ? 'bg-slate-800 text-white shadow-lg shadow-black/50' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
+                                <Icon path={icons.Database} size={18} /> The Hunter
+                            </button>
+                            <button onClick={() => setActiveTab('gatekeeper')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'gatekeeper' ? 'bg-slate-800 text-white shadow-lg shadow-black/50' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
+                                <Icon path={icons.Shield} size={18} /> Gatekeeper
+                            </button>
+                            <button onClick={() => setActiveTab('steward')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'steward' ? 'bg-slate-800 text-white shadow-lg shadow-black/50' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
+                                <Icon path={icons.Users} size={18} /> The Steward
+                            </button>
+                        </nav>
+
+                        {/* Content */}
+                        <section className="col-span-10 bg-slate-900/50 border border-slate-800 rounded-2xl p-6 min-h-[600px] relative overflow-hidden shadow-2xl">
+                            {/* Bg Effect */}
+                            <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+
+                            {activeTab === 'hunter' && (
+                                <div className="animate-fadeIn space-y-6">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-white">Outbound Data Waterfall</h2>
+                                            <p className="text-slate-400 text-sm">Sources: PubMed, Crunchbase, Apollo</p>
+                                        </div>
+                                        <button onClick={runEnrichment} disabled={processing} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50">
+                                            {processing ? <Icon path={icons.RefreshCw} className="animate-spin" size={16}/> : <Icon path={icons.Zap} size={16}/>}
+                                            {processing ? "Hunting..." : "Run Global Refresh"}
+                                        </button>
+                                    </div>
+
+                                    <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/50">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-900 text-slate-400 font-medium uppercase text-xs tracking-wider">
+                                                <tr>
+                                                    <th className="px-6 py-4">Prospect</th>
+                                                    <th className="px-6 py-4">Source</th>
+                                                    <th className="px-6 py-4">Status</th>
+                                                    <th className="px-6 py-4 text-purple-400 flex items-center gap-2"><Icon path={icons.Sparkles} size={14}/> AI Hook</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800">
+                                                {leads.map(lead => (
+                                                    <tr key={lead.id} onClick={() => setModalLead(lead)} className="hover:bg-slate-800/50 transition-colors cursor-pointer group">
+                                                        <td className="px-6 py-4">
+                                                            <div className="font-medium text-white">{lead.name}</div>
+                                                            <div className="text-slate-500 text-xs">{lead.title} @ {lead.org}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="px-2 py-1 rounded text-xs border border-slate-700 bg-slate-800 text-slate-300 group-hover:border-slate-600 transition-colors">{lead.source}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-emerald-400 flex items-center gap-2">
+                                                            <Icon path={icons.Check} size={14} /> {lead.waterfall}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-slate-400 italic max-w-xs truncate">
+                                                            "{lead.hook}"
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Placeholder for other tabs to ensure file completeness */}
+                            {activeTab !== 'hunter' && (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-600">
+                                    <Icon path={icons.Shield} size={48} className="mb-4 opacity-20" />
+                                    <p>Select "The Hunter" to view the active demo.</p>
+                                </div>
+                            )}
+
+                        </section>
+                    </main>
+
+                    {/* Modals */}
+                    {modalLead && <EmailModal lead={modalLead} onClose={() => setModalLead(null)} />}
+
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

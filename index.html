@@ -1,30 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Velvet Rope Growth Agent v2.5</title>
-    
-    <!-- 1. TAILWIND CSS (Styling) -->
+
+    <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. REACT LIBRARIES (Development versions are safer for single-file hosting) -->
+
+    <!-- 2. React 18 & ReactDOM 18 (Development builds for in-browser Babel compatibility) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
-    <!-- 3. BABEL (Compiles the code right in the browser) -->
+
+    <!-- 3. Babel (Compiles JSX in the browser) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 4. FONTS -->
+
+    <!-- 4. Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-    <!-- Custom Config -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        slate: { 950: '#020617' }
+                        slate: { 950: "#020617" } // Cyber-dark background
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -32,35 +31,45 @@
                     }
                 }
             }
-        }
+        };
     </script>
 
     <style>
         body { background-color: #020617; color: #e2e8f0; }
+        
         /* Animations */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
         .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-slideIn { animation: slideIn 0.3s ease-out forwards; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
+
 <body>
+    <!-- Root Container -->
     <div id="root"></div>
 
-    <!-- MAIN APP LOGIC -->
+    <!-- React Application Logic -->
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
         const { createRoot } = ReactDOM;
 
         // --- CONFIGURATION ---
-        const apiKey = ""; // Leave empty for Simulation Mode
+        const apiKey = ""; // Empty key triggers "Simulation Mode"
 
-        // --- ICONS (Internal SVGs to prevent loading errors) ---
+        // --- ICONS (Internal SVGs to prevent loading errors on GitHub Pages) ---
         const Icon = ({ path, color = "currentColor", size = 20, className="" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {path}
             </svg>
         );
 
-        // Icon Paths
         const icons = {
             Target: <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>,
             Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
@@ -73,79 +82,355 @@
             TrendingUp: <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>,
             Mail: <><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>,
             RefreshCw: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></>,
-            Sparkles: <><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>,
+            Sparkles: <><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275-1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>,
             ExternalLink: <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></>,
             Clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
-            Send: <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>
+            Send: <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
+            Network: <><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></>,
+            FileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></>,
+            ChevronDown: <path d="m6 9 6 6 6-6"/>,
+            ChevronUp: <path d="m18 15-6-6-6 6"/>
         };
 
-        // --- MOCK DATA ---
-        const LEADS = [
-            { id: 1, name: "Dr. Elena Ross", title: "Chief of Oncology", org: "MSKCC", source: "PubMed", status: "Enriched", waterfall: "Found ✅", hook: "Read your paper on CAR-T efficacy..." },
-            { id: 2, name: "Marcus Thorne", title: "General Partner", org: "Greylock Bio", source: "Crunchbase", status: "Enriched", waterfall: "Found ✅", hook: "Saw your Series B bet in MediGen..." },
-            { id: 3, name: "Sarah Jenkins", title: "VP Strategy", org: "UnitedHealth", source: "Apollo", status: "Enriched", waterfall: "Found ✅", hook: "Noticed UHG's new AI partnership..." }
+        // --- MOCK DATA GENERATORS ---
+        const FIRST_NAMES = ["Dr. Elena", "Marcus", "Sarah", "Rajiv", "Dr. James", "Emily", "Michael", "Dr. Sarah", "David", "Jessica", "Aisha", "Wei", "Dr. Robert", "Dr. Lisa"];
+        const LAST_NAMES = ["Ross", "Thorne", "Jenkins", "Patel", "O'Connell", "Chen", "Dubois", "Kim", "Gupta", "Santos", "Wong", "Ivanov"];
+        const ROLES = [
+            { title: "Chief of Oncology", tier: "Tier 1", type: "CLINICIAN" },
+            { title: "General Partner", tier: "Tier 1", type: "INVESTOR" },
+            { title: "Sales Associate", tier: "Tier 3", type: "SALES" },
+            { title: "VP Strategy", tier: "Tier 1", type: "EXEC" },
+            { title: "Head of Research", tier: "Tier 1", type: "CLINICIAN" },
+            { title: "Student Intern", tier: "Tier 3", type: "STUDENT" },
+            { title: "Director of Innovation", tier: "Tier 2", type: "EXEC" },
+            { title: "Clinical Lead", tier: "Tier 2", type: "CLINICIAN" },
+            { title: "Angel Investor", tier: "Tier 2", type: "INVESTOR" }
+        ];
+        const ORGS = ["MSKCC", "Greylock Bio", "HealthCo", "UHG", "Mayo Clinic", "Salesforce", "Pfizer", "Stanford Health", "Andreessen Horowitz", "Mount Sinai", "Cleveland Clinic", "Sequoia"];
+        const SOURCES = ["PubMed", "Crunchbase", "Apollo", "Inbound", "LinkedIn", "NIH RePORTER"];
+        const APP_ANSWERS = [
+            "Looking to find Series B lead investors for our new radiomics platform.",
+            "I want to learn about AI.",
+            "Connecting with other C-level execs about value-based care models.",
+            "My boss told me to come.",
+            "Interested in how generative AI impacts CAR-T trials.",
+            "Networking.",
+            "Our hospital is deploying a new oncology LLM, need best practices."
         ];
 
-        // --- COMPONENTS ---
+        // Realistic hooks for simulation
+        const getMockHook = (lead) => {
+            if (lead.type === "CLINICIAN") return `Read your recent paper on ${['immunotherapy', 'radiomics', 'precision medicine'][Math.floor(Math.random()*3)]}...`;
+            if (lead.type === "INVESTOR") return `Saw your recent ${['Series A', 'Series B', 'Seed'][Math.floor(Math.random()*3)]} investment in ${['BioTech', 'MedGen', 'CureAI'][Math.floor(Math.random()*3)]}...`;
+            if (lead.type === "EXEC") return `Noticed ${lead.org}'s new strategic partnership with ${['Google Health', 'Epic', 'Oracle'][Math.floor(Math.random()*3)]}...`;
+            return "Noticed your work in the healthcare space...";
+        }
 
-        const EmailModal = ({ lead, onClose }) => {
-            if (!lead) return null;
+        const generateRandomLead = (id) => {
+            const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+            const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+            const roleObj = ROLES[Math.floor(Math.random() * ROLES.length)];
+            const org = ORGS[Math.floor(Math.random() * ORGS.length)];
+            const source = SOURCES[Math.floor(Math.random() * SOURCES.length)];
+            const answer = APP_ANSWERS[Math.floor(Math.random() * APP_ANSWERS.length)];
+
+            let profileUrl = "#";
+            if (source === "PubMed") profileUrl = `https://pubmed.ncbi.nlm.nih.gov/?term=${lastName}+${firstName}`;
+            else if (source === "Crunchbase") profileUrl = `https://www.crunchbase.com/textsearch?q=${encodeURIComponent(org)}`;
+            else profileUrl = `https://www.google.com/search?q=${encodeURIComponent(firstName + " " + lastName + " " + org)}`;
+
+            const newLead = {
+                id: id,
+                name: `${firstName} ${lastName}`,
+                title: roleObj.title,
+                org: org,
+                source: source,
+                profileUrl: profileUrl,
+                applicationAnswer: answer,
+                status: "Pending",
+                waterfallStatus: "Idle", 
+                hook: "Generating...",
+                type: roleObj.type,
+                tier: roleObj.tier
+            };
+            newLead.hook = getMockHook(newLead);
+            return newLead;
+        };
+
+        // --- SUB-COMPONENTS ---
+
+        // 1. Cluster Map (Steward)
+        const ClusterMap = ({ attendees }) => {
+            const clusters = attendees.reduce((acc, curr) => {
+                if (!acc[curr.org]) acc[curr.org] = [];
+                acc[curr.org].push(curr);
+                return acc;
+            }, {});
+            const orgs = Object.keys(clusters).filter(org => clusters[org].length > 0);
+
+            return (
+                <div className="relative w-full h-80 bg-slate-900 rounded-xl border border-slate-800 overflow-hidden mt-6">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-full h-full opacity-10" style={{backgroundImage: 'radial-gradient(#4b5563 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
+                    </div>
+                    <div className="absolute top-4 left-4 z-10">
+                        <h4 className="text-white font-bold text-sm flex items-center gap-2"><Icon path={icons.Network} size={14} className="text-emerald-400"/> Live Cluster Map</h4>
+                        <p className="text-slate-500 text-xs">Visualizing multi-attendee organizations</p>
+                    </div>
+                    <div className="w-full h-full flex items-center justify-center p-8 overflow-x-auto">
+                        {orgs.length === 0 ? (
+                            <div className="text-slate-500 flex flex-col items-center">
+                                <Icon path={icons.Users} size={32} className="mb-2 opacity-50"/>
+                                <p>No clusters detected yet. Approve more VIPs.</p>
+                            </div>
+                        ) : (
+                            <div className="flex gap-12 flex-wrap justify-center items-center">
+                                {orgs.map((org, i) => (
+                                    <div key={org} className="relative group cursor-pointer transition-transform hover:scale-105">
+                                        <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-purple-500 flex items-center justify-center z-10 relative shadow-lg shadow-purple-900/50">
+                                            <span className="text-[10px] text-center font-bold text-white leading-tight px-1">{org}</span>
+                                        </div>
+                                        {/* Orbiting Attendees */}
+                                        {clusters[org].map((attendee, idx) => {
+                                            const count = clusters[org].length;
+                                            const angle = (idx / count) * 2 * Math.PI;
+                                            const radius = 60;
+                                            const x = Math.cos(angle) * radius;
+                                            const y = Math.sin(angle) * radius;
+                                            return (
+                                                <div key={attendee.id} className="absolute w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center top-1/2 left-1/2 -mt-4 -ml-4 transition-all duration-500" 
+                                                    style={{ transform: `translate(${x}px, ${y}px)` }}>
+                                                    <span className="text-[8px] text-slate-300 font-bold">{attendee.name.charAt(0)}</span>
+                                                    <div className="absolute w-1 h-1 bg-slate-600 rounded-full" style={{ top: '50%', left: '50%', transform: `translate(${x * -0.5}px, ${y * -0.5}px)` }}></div>
+                                                </div>
+                                            )
+                                        })}
+                                        {clusters[org].length > 1 && (
+                                            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-emerald-900/80 text-emerald-200 text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-emerald-500/30">
+                                                Cluster Detected: Offer Group Seating
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // 2. Email Preview Modal (Hunter)
+        const EmailPreviewModal = ({ lead, onClose }) => {
+            const [senderEmail, setSenderEmail] = useState("growth@risalabs.com");
+            const [recipientEmail, setRecipientEmail] = useState(`${lead.name.split(' ')[0].toLowerCase()}@${lead.org.toLowerCase().replace(/\s/g, '')}.com`);
+
             const handleSend = () => {
-                window.location.href = `mailto:?subject=Invitation&body=${encodeURIComponent(lead.hook)}`;
+                const subject = "Invitation: Elite Oncology Summit @ RISA";
+                const body = `Hi ${lead.name.split(' ')[0]},\n\n${lead.hook}\n\nGiven your role at ${lead.org}, I thought you would be interested in joining a curated group of 500 leaders across oncology, investment, and payer strategy.\n\nWe are filtering strictly for decision-makers and active researchers. No vendors, no noise.\n\nCan I send over the guest list?\n\nBest,\nThe RISA Team`;
+                const mailtoLink = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                window.location.href = mailtoLink;
                 onClose();
             };
+
             return (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className="bg-white rounded-xl w-full max-w-lg text-slate-900 overflow-hidden">
-                        <div className="bg-slate-100 p-4 border-b flex justify-between items-center">
-                            <h3 className="font-bold flex items-center gap-2"><Icon path={icons.Mail} size={16} /> Draft</h3>
-                            <button onClick={onClose}><Icon path={icons.X} size={20} className="text-slate-400 hover:text-slate-700"/></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden text-slate-900">
+                        <div className="bg-slate-100 border-b px-6 py-4 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-700 flex items-center gap-2"><Icon path={icons.Mail} size={16}/> Email Preview: {lead.type} Sequence</h3>
+                            <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><Icon path={icons.X} size={20}/></button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div className="text-sm space-y-2">
-                                <div className="flex border-b pb-1"><span className="w-16 text-slate-500">To:</span> <span className="font-mono">{lead.name}</span></div>
-                                <div className="flex border-b pb-1"><span className="w-16 text-slate-500">Subject:</span> <span>Invitation: Elite Oncology Summit</span></div>
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-2 text-sm">
+                                <div className="flex items-center border-b border-slate-200 pb-2">
+                                    <span className="w-20 text-slate-500 font-medium">From:</span>
+                                    <input type="text" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} className="font-medium text-slate-900 bg-transparent outline-none flex-1 placeholder:text-slate-400"/>
+                                </div>
+                                <div className="flex items-center border-b border-slate-200 pb-2">
+                                    <span className="w-20 text-slate-500 font-medium">To:</span>
+                                    <input type="text" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="font-medium text-slate-900 bg-transparent outline-none flex-1 placeholder:text-slate-400"/>
+                                </div>
+                                <div className="flex border-b border-slate-200 pb-2">
+                                    <span className="w-20 text-slate-500 font-medium">Subject:</span>
+                                    <span className="font-medium text-slate-900">Invitation: Elite Oncology Summit @ RISA</span>
+                                </div>
                             </div>
-                            <div className="p-4 bg-purple-50 border-l-4 border-purple-500 rounded text-purple-900 italic text-sm">
-                                "{lead.hook}" <br/> <span className="text-xs font-bold not-italic mt-1 block text-purple-400 uppercase">AI Generated Hook</span>
+                            
+                            <div className="text-slate-700 leading-relaxed space-y-4 font-serif">
+                                <p>Hi {lead.name.split(' ')[0]},</p>
+                                <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r">
+                                    <p className="text-purple-900 font-medium italic">"{lead.hook}"</p>
+                                    <p className="text-[10px] text-purple-400 mt-2 uppercase font-sans tracking-wider not-italic font-bold">AI Generated Hook (Chameleon Engine)</p>
+                                </div>
+                                <p>Given your role at {lead.org}, I thought you would be interested in joining a curated group of 500 leaders across oncology, investment, and payer strategy.</p>
+                                <p>We are filtering strictly for decision-makers and active researchers. No vendors, no noise.</p>
+                                <p>Can I send over the guest list?</p>
+                                <p>Best,<br/>The RISA Team</p>
                             </div>
-                            <p className="text-slate-600 text-sm">Given your role at {lead.org}, I thought you'd be interested in joining a curated group of 500 leaders...</p>
                         </div>
-                        <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
-                            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded">Edit</button>
-                            <button onClick={handleSend} className="px-4 py-2 text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 rounded flex items-center gap-2"><Icon path={icons.Send} size={14}/> Dispatch</button>
+                        <div className="bg-slate-50 px-6 py-4 border-t flex justify-end gap-3">
+                            <button onClick={onClose} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors">Edit</button>
+                            <button onClick={handleSend} className="px-6 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-lg shadow-purple-500/20">
+                                <Icon path={icons.Send} size={16}/> Approve & Dispatch
+                            </button>
                         </div>
                     </div>
                 </div>
             );
         };
 
+        // 3. Live Activity Feed (Steward)
+        const LiveActivityFeed = () => {
+            const [activities, setActivities] = useState([
+                { id: 1, text: "Dr. Elena Ross used her +1 invite for Dr. James Chen.", time: "2m ago", type: "referral" },
+                { id: 2, text: "Waitlist Alert: 5 new qualified leads added to queue.", time: "5m ago", type: "alert" },
+                { id: 3, text: "Cluster Detected: 3 Executives from Mayo Clinic.", time: "12m ago", type: "cluster" },
+            ]);
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    const newActs = [
+                        { id: Date.now(), text: "New VIP Confirmation: Sarah Jenkins (Tier 1).", time: "Just now", type: "rsvp" },
+                        { id: Date.now() + 1, text: "Marcus Thorne forwarded invite to Partner.", time: "Just now", type: "referral" },
+                        { id: Date.now() + 2, text: "Sourcing Engine: Added 12 new Clinicians from PubMed.", time: "Just now", type: "source" }
+                    ];
+                    const pick = newActs[Math.floor(Math.random() * newActs.length)];
+                    setActivities(prev => [pick, ...prev].slice(0, 6));
+                }, 5000);
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 h-full overflow-hidden">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><Icon path={icons.Activity} size={14}/> Live Steward Feed</h3>
+                    <div className="space-y-4">
+                        {activities.map(act => (
+                            <div key={act.id} className="flex gap-3 items-start animate-fadeIn">
+                                <div className={`mt-1 w-2 h-2 rounded-full ${act.type === 'referral' ? 'bg-purple-400' : act.type === 'cluster' ? 'bg-emerald-400' : act.type === 'rsvp' ? 'bg-blue-400' : 'bg-slate-400'}`}></div>
+                                <div>
+                                    <p className="text-sm text-slate-300 leading-snug">{act.text}</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">{act.time}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // --- MAIN APP ---
         const App = () => {
             const [activeTab, setActiveTab] = useState('hunter');
+            const [viewMode, setViewMode] = useState('list');
             const [processing, setProcessing] = useState(false);
-            const [leads, setLeads] = useState(LEADS);
-            const [modalLead, setModalLead] = useState(null);
+            const [analyzingJudge, setAnalyzingJudge] = useState(false);
+            const [judgeRationale, setJudgeRationale] = useState("");
+            
+            // Data States
+            const [hunterLeads, setHunterLeads] = useState([]);
+            const [gatekeeperQueue, setGatekeeperQueue] = useState([]);
+            const [vipAttendees, setVipAttendees] = useState([]); 
+            
+            // UI States
+            const [expandedLeadId, setExpandedLeadId] = useState(null);
+            const [dossiers, setDossiers] = useState({});
+            const [generatingDossier, setGeneratingDossier] = useState(false);
+            const [previewEmailLead, setPreviewEmailLead] = useState(null);
 
-            const runEnrichment = () => {
+            // Metrics
+            const [metrics, setMetrics] = useState({ total: 1240, qualified: 312, rsvp: "42%", referrals: 89 });
+
+            // Initial Load
+            useEffect(() => {
+                const initial = Array.from({ length: 4 }, (_, i) => generateRandomLead(i + 1));
+                const preEnriched = initial.map(l => ({ 
+                    ...l, 
+                    status: "Enriched", 
+                    waterfallStatus: "Found ✅"
+                }));
+                setHunterLeads(preEnriched);
+                
+                // Pre-populate VIPs for Steward Demo
+                setVipAttendees([
+                    { id: 901, name: "Dr. A. Smith", org: "MSKCC" }, 
+                    { id: 902, name: "Dr. B. Jones", org: "MSKCC" },
+                    { id: 903, name: "M. Chen", org: "Greylock Bio" },
+                    { id: 904, name: "J. Doe", org: "Greylock Bio" },
+                    { id: 905, name: "L. Wei", org: "Greylock Bio" }
+                ]);
+            }, []);
+
+            // --- ACTIONS ---
+
+            const runEnrichment = async () => {
                 setProcessing(true);
-                // Simulate AI work
+                const newLeadsCount = 2; 
+                const currentMaxId = Math.max(...hunterLeads.map(l => l.id), 0);
+                const newLeads = Array.from({ length: newLeadsCount }, (_, i) => generateRandomLead(currentMaxId + i + 1));
+                
+                setHunterLeads(prev => [...newLeads, ...prev]);
+
+                // Simulate Waterfall Animation
+                const sources = ["Apollo", "Dropcontact", "PubMed", "Verification"];
+                for (const lead of newLeads) {
+                    for (let i=0; i<sources.length; i++) {
+                        setHunterLeads(prev => prev.map(p => p.id === lead.id ? { ...p, waterfallStatus: `Checking ${sources[i]}...` } : p));
+                        await new Promise(r => setTimeout(r, 300));
+                    }
+                    setHunterLeads(prev => prev.map(p => p.id === lead.id ? { ...p, waterfallStatus: "Found ✅", status: "Enriched ✨" } : p));
+                }
+                
+                setProcessing(false);
+
+                // Push to Gatekeeper
+                const leadsToGatekeep = newLeads.map(l => {
+                    let score = 50; 
+                    if (l.type === "CLINICIAN" || l.type === "EXEC" || l.type === "INVESTOR") score += 30;
+                    if (l.tier === "Tier 1") score += 20;
+                    if (l.type === "STUDENT") score = 10;
+                    score = Math.min(100, Math.max(0, score + Math.floor(Math.random() * 20) - 10)); 
+
+                    return { ...l, score, tags: [l.type, l.source] };
+                });
+                
+                setGatekeeperQueue(prev => [...prev, ...leadsToGatekeep]);
+            };
+
+            const generateLeadDossier = async (lead) => {
+                if (dossiers[lead.id]) {
+                    setExpandedLeadId(expandedLeadId === lead.id ? null : lead.id);
+                    return;
+                }
+                
+                setExpandedLeadId(lead.id);
+                setGeneratingDossier(true);
+                
+                // Simulate API Call
                 setTimeout(() => {
-                    const newId = Math.max(...leads.map(l => l.id)) + 1;
-                    const newLead = { 
-                        id: newId, 
-                        name: "Dr. James Chen", 
-                        title: "Head of Research", 
-                        org: "Mayo Clinic", 
-                        source: "PubMed", 
-                        status: "Enriched ✨", 
-                        waterfall: "Found ✅", 
-                        hook: "Analyzed your latest trial results..." 
-                    };
-                    setLeads([newLead, ...leads]);
-                    setProcessing(false);
+                    const briefing = `• **Strategic Fit:** ${lead.name} is a key decision maker at ${lead.org}, managing a significant budget for oncology initiatives.\n• **Recent Signal:** Recently published research on ${lead.type === 'CLINICIAN' ? 'immunotherapy' : 'digital health'} which aligns with our summit theme.`;
+                    setDossiers(prev => ({...prev, [lead.id]: briefing}));
+                    setGeneratingDossier(false);
+                }, 1200);
+            };
+
+            const getGeminiVerdict = async (candidate) => {
+                setAnalyzingJudge(true);
+                setTimeout(() => {
+                    const rationale = `Based on the 100-point rubric: Candidate scores ${candidate.score}/100. High value due to Tier 1 organization (${candidate.org}) and Senior Title (${candidate.title}), despite generic application text.`;
+                    setJudgeRationale(rationale);
+                    setAnalyzingJudge(false);
                 }, 1500);
             };
 
+            // Gatekeeper Actions
+            const handleApprove = (lead) => {
+                setGatekeeperQueue(prev => prev.filter(p => p.id !== lead.id));
+                setMetrics(prev => ({ ...prev, qualified: prev.qualified + 1 }));
+                setJudgeRationale("");
+                setVipAttendees(prev => [...prev, lead]);
+            };
+            const handleReject = (id) => { setGatekeeperQueue(prev => prev.filter(p => p.id !== id)); setJudgeRationale(""); };
+
+            // --- RENDER ---
             return (
                 <div className="min-h-screen flex flex-col font-sans">
                     {/* Header */}
@@ -156,99 +441,265 @@
                             </div>
                             <div>
                                 <h1 className="font-bold text-lg tracking-tight text-white">Velvet Rope <span className="text-purple-400">v2.5</span></h1>
+                                <p className="text-xs text-slate-500 font-mono">GROWTH AGENT // RISA LABS</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20">
+                        <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20 animate-pulse">
                             <Icon path={icons.Activity} size={12} /> SYSTEM ACTIVE
                         </div>
                     </header>
 
-                    {/* Main */}
+                    {previewEmailLead && <EmailPreviewModal lead={previewEmailLead} onClose={() => setPreviewEmailLead(null)} />}
+
                     <main className="flex-1 max-w-7xl mx-auto w-full p-6 grid grid-cols-12 gap-8">
                         
                         {/* Sidebar */}
                         <nav className="col-span-2 space-y-1">
-                            <button onClick={() => setActiveTab('hunter')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'hunter' ? 'bg-slate-800 text-white shadow-lg shadow-black/50' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
-                                <Icon path={icons.Database} size={18} /> The Hunter
+                            <button onClick={() => setActiveTab('hunter')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'hunter' ? 'bg-slate-800 text-white shadow-lg shadow-black/50 border border-slate-700' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
+                                <div className="flex items-center gap-3"><Icon path={icons.Database} size={18} /> The Hunter</div>
                             </button>
-                            <button onClick={() => setActiveTab('gatekeeper')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'gatekeeper' ? 'bg-slate-800 text-white shadow-lg shadow-black/50' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
-                                <Icon path={icons.Shield} size={18} /> Gatekeeper
+                            <button onClick={() => setActiveTab('gatekeeper')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'gatekeeper' ? 'bg-slate-800 text-white shadow-lg shadow-black/50 border border-slate-700' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
+                                <div className="flex items-center gap-3"><Icon path={icons.Shield} size={18} /> Gatekeeper</div>
+                                {gatekeeperQueue.length > 0 && <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{gatekeeperQueue.length}</span>}
                             </button>
-                            <button onClick={() => setActiveTab('steward')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'steward' ? 'bg-slate-800 text-white shadow-lg shadow-black/50' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
-                                <Icon path={icons.Users} size={18} /> The Steward
+                            <button onClick={() => setActiveTab('steward')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'steward' ? 'bg-slate-800 text-white shadow-lg shadow-black/50 border border-slate-700' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}>
+                                <div className="flex items-center gap-3"><Icon path={icons.Users} size={18} /> The Steward</div>
                             </button>
                         </nav>
 
-                        {/* Content */}
+                        {/* Main Content */}
                         <section className="col-span-10 bg-slate-900/50 border border-slate-800 rounded-2xl p-6 min-h-[600px] relative overflow-hidden shadow-2xl">
-                            {/* Bg Effect */}
                             <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
 
+                            {/* --- VIEW 1: THE HUNTER --- */}
                             {activeTab === 'hunter' && (
                                 <div className="animate-fadeIn space-y-6">
                                     <div className="flex justify-between items-center">
                                         <div>
                                             <h2 className="text-2xl font-bold text-white">Outbound Data Waterfall</h2>
-                                            <p className="text-slate-400 text-sm">Sources: PubMed, Crunchbase, Apollo</p>
+                                            <p className="text-slate-400 text-sm">Sources: PubMed, Crunchbase, Apollo, NIH RePORTER</p>
                                         </div>
-                                        <button onClick={runEnrichment} disabled={processing} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50">
-                                            {processing ? <Icon path={icons.RefreshCw} className="animate-spin" size={16}/> : <Icon path={icons.Zap} size={16}/>}
-                                            {processing ? "Hunting..." : "Run Global Refresh"}
-                                        </button>
+                                        <div className="flex gap-3">
+                                            <div className="bg-slate-900 rounded-lg p-1 border border-slate-700 flex">
+                                                <button onClick={() => setViewMode('list')} className={`px-3 py-1 text-xs font-medium rounded transition-colors ${viewMode === 'list' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}>List</button>
+                                                <button onClick={() => setViewMode('dispatch')} className={`px-3 py-1 text-xs font-medium rounded transition-colors ${viewMode === 'dispatch' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}>Dispatch Queue</button>
+                                            </div>
+                                            <button onClick={runEnrichment} disabled={processing} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50 shadow-lg shadow-purple-500/20">
+                                                {processing ? <Icon path={icons.RefreshCw} className="animate-spin" size={16}/> : <Icon path={icons.Zap} size={16}/>}
+                                                {processing ? "Hunting..." : "Run Global Refresh"}
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/50">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="bg-slate-900 text-slate-400 font-medium uppercase text-xs tracking-wider">
-                                                <tr>
-                                                    <th className="px-6 py-4">Prospect</th>
-                                                    <th className="px-6 py-4">Source</th>
-                                                    <th className="px-6 py-4">Status</th>
-                                                    <th className="px-6 py-4 text-purple-400 flex items-center gap-2"><Icon path={icons.Sparkles} size={14}/> AI Hook</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-800">
-                                                {leads.map(lead => (
-                                                    <tr key={lead.id} onClick={() => setModalLead(lead)} className="hover:bg-slate-800/50 transition-colors cursor-pointer group">
-                                                        <td className="px-6 py-4">
-                                                            <div className="font-medium text-white">{lead.name}</div>
-                                                            <div className="text-slate-500 text-xs">{lead.title} @ {lead.org}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className="px-2 py-1 rounded text-xs border border-slate-700 bg-slate-800 text-slate-300 group-hover:border-slate-600 transition-colors">{lead.source}</span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-emerald-400 flex items-center gap-2">
-                                                            <Icon path={icons.Check} size={14} /> {lead.waterfall}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-slate-400 italic max-w-xs truncate">
-                                                            "{lead.hook}"
-                                                        </td>
+                                    {viewMode === 'list' ? (
+                                        <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/50">
+                                            <table className="w-full text-left text-sm">
+                                                <thead className="bg-slate-900 text-slate-400 font-medium uppercase text-xs tracking-wider">
+                                                    <tr>
+                                                        <th className="px-6 py-4">Prospect</th>
+                                                        <th className="px-6 py-4">Source Waterfall</th>
+                                                        <th className="px-6 py-4">Status</th>
+                                                        <th className="px-6 py-4 text-purple-400 flex items-center gap-2"><Icon path={icons.Sparkles} size={14}/> AI Hook (Chameleon)</th>
+                                                        <th className="px-6 py-4"></th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-800">
+                                                    {hunterLeads.map(lead => (
+                                                        <React.Fragment key={lead.id}>
+                                                            <tr className={`hover:bg-slate-800/50 transition-colors cursor-pointer group ${expandedLeadId === lead.id ? 'bg-slate-800/60' : ''}`} onClick={() => generateLeadDossier(lead)}>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="font-medium text-white">{lead.name}</div>
+                                                                    <div className="text-slate-500 text-xs">{lead.title} @ {lead.org}</div>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    {lead.waterfallStatus.includes("Checking") ? (
+                                                                        <span className="text-xs font-mono text-amber-400 animate-pulse">{lead.waterfallStatus}</span>
+                                                                    ) : (
+                                                                        <a href={lead.profileUrl} target="_blank" onClick={(e)=>e.stopPropagation()} className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-slate-600 bg-slate-800 text-slate-300 hover:border-purple-500 hover:text-white transition-colors">
+                                                                            {lead.source} verified <Icon path={icons.ExternalLink} size={10} />
+                                                                        </a>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    {lead.status.includes('Enriched') ? 
+                                                                        <span className="text-emerald-400 flex items-center gap-1 bg-emerald-400/10 px-2 py-1 rounded-full text-xs w-fit border border-emerald-400/20"><Icon path={icons.Check} size={12}/> Ready</span> : 
+                                                                        <span className="text-amber-400 flex items-center gap-1"><Icon path={icons.Activity} size={14} className="animate-spin"/> Processing</span>}
+                                                                </td>
+                                                                <td className="px-6 py-4 text-slate-400 italic max-w-xs truncate group-hover:text-slate-300 transition-colors">"{lead.hook}"</td>
+                                                                <td className="px-6 py-4 text-slate-500">{expandedLeadId === lead.id ? <Icon path={icons.ChevronUp} size={16}/> : <Icon path={icons.ChevronDown} size={16}/>}</td>
+                                                            </tr>
+                                                            {expandedLeadId === lead.id && (
+                                                                <tr className="bg-slate-900/80 animate-fadeIn border-b border-slate-800">
+                                                                    <td colSpan={5} className="px-6 py-4">
+                                                                        <div className="flex gap-4">
+                                                                            <div className="flex-1 bg-slate-800/50 border border-slate-700 rounded-lg p-4 relative overflow-hidden">
+                                                                                <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                                                                                <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-2"><Icon path={icons.FileText} size={12}/> Strategic Dossier</h4>
+                                                                                {generatingDossier && !dossiers[lead.id] ? 
+                                                                                    <div className="flex items-center gap-2 text-slate-400 text-sm animate-pulse"><Icon path={icons.Sparkles} size={14}/> AI is analyzing career history...</div> : 
+                                                                                    <div className="text-sm text-slate-300 whitespace-pre-line leading-relaxed">{dossiers[lead.id]}</div>
+                                                                                }
+                                                                            </div>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setPreviewEmailLead(lead); }} className="flex flex-col items-center justify-center px-6 bg-slate-800/50 border border-slate-700 rounded-lg hover:bg-slate-700 hover:border-purple-500 transition-all group">
+                                                                                <Icon path={icons.Mail} size={24} className="text-slate-400 group-hover:text-purple-400 mb-2"/>
+                                                                                <span className="text-xs font-bold text-slate-300 group-hover:text-white">Preview Email</span>
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {["CLINICIAN", "EXEC", "INVESTOR"].map(type => (
+                                                <div key={type} className="bg-slate-900/80 rounded-xl p-4 border border-slate-800">
+                                                    <h3 className={`text-xs font-bold uppercase mb-3 flex items-center gap-2 ${type==='CLINICIAN'?'text-emerald-400':type==='EXEC'?'text-blue-400':'text-amber-400'}`}><Icon path={icons.Clock} size={14}/> {type} Batch (2PM EST)</h3>
+                                                    <div className="space-y-2">
+                                                        {hunterLeads.filter(l => l.type === type).slice(0, 4).map(l => (
+                                                            <div key={l.id} className="bg-slate-800 p-2 rounded text-xs border border-slate-700 flex justify-between items-center">
+                                                                <span className="text-slate-300">{l.name}</span>
+                                                                <span className="text-slate-500 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Queued</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
-                            
-                            {/* Placeholder for other tabs to ensure file completeness */}
-                            {activeTab !== 'hunter' && (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-600">
-                                    <Icon path={icons.Shield} size={48} className="mb-4 opacity-20" />
-                                    <p>Select "The Hunter" to view the active demo.</p>
+
+                            {/* --- VIEW 2: GATEKEEPER --- */}
+                            {activeTab === 'gatekeeper' && (
+                                <div className="animate-fadeIn space-y-6">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-white">The AI Gatekeeper</h2>
+                                            <p className="text-slate-400 text-sm">Scoring Model: 100-Point Healthcare Scale</p>
+                                        </div>
+                                        <div className="flex gap-6 text-sm">
+                                            <div className="text-right"><p className="text-slate-500 text-xs uppercase">Waitlist</p><p className="font-mono font-bold text-amber-400">30-59 pts</p></div>
+                                            <div className="text-right"><p className="text-slate-500 text-xs uppercase">VIP</p><p className="font-mono font-bold text-emerald-400">&gt; 60 pts</p></div>
+                                        </div>
+                                    </div>
+
+                                    {gatekeeperQueue.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-64 text-slate-600 border-2 border-dashed border-slate-800 rounded-xl">
+                                            <Icon path={icons.Check} size={48} className="mb-4 text-emerald-500/50" />
+                                            <p>Queue Cleared. Run the Hunter Engine to find more leads.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            {/* Candidate Card */}
+                                            <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700 relative overflow-hidden">
+                                                <div className={`absolute top-0 left-0 w-1 h-full ${gatekeeperQueue[0].score >= 60 ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div>
+                                                        <h3 className="text-2xl font-bold text-white">{gatekeeperQueue[0].name}</h3>
+                                                        <p className="text-lg text-purple-300">{gatekeeperQueue[0].title}</p>
+                                                        <p className="text-slate-400 text-sm">{gatekeeperQueue[0].org}</p>
+                                                    </div>
+                                                    <div className="bg-slate-900 rounded-lg p-3 text-center border border-slate-700 min-w-[80px]">
+                                                        <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Score</p>
+                                                        <p className={`text-3xl font-bold ${gatekeeperQueue[0].score >= 60 ? 'text-emerald-400' : 'text-amber-400'}`}>{gatekeeperQueue[0].score}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-6">
+                                                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2 font-bold">Application Response</p>
+                                                    <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700 text-sm text-slate-300 italic leading-relaxed">
+                                                        "{gatekeeperQueue[0].applicationAnswer}"
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2 mb-8">
+                                                    {gatekeeperQueue[0].tags.map(t => (
+                                                        <div key={t} className="flex justify-between p-2 bg-slate-900/30 rounded border border-slate-700/50 text-xs">
+                                                            <span className="text-slate-300">{t}</span>
+                                                            <span className="text-emerald-500 flex items-center gap-1"><Icon path={icons.Check} size={10}/> Detected</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {judgeRationale ? (
+                                                    <div className="mb-6 p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg animate-fadeIn">
+                                                        <div className="flex items-center gap-2 mb-2 text-purple-400 text-xs font-bold uppercase tracking-wider"><Icon path={icons.Sparkles} size={12}/> The Judge's Verdict</div>
+                                                        <p className="text-sm text-slate-200 italic">"{judgeRationale}"</p>
+                                                    </div>
+                                                ) : (
+                                                    <button onClick={() => getGeminiVerdict(gatekeeperQueue[0])} disabled={analyzingJudge} className="w-full mb-6 py-2 rounded-lg bg-slate-700/30 text-slate-300 hover:bg-slate-700/50 hover:text-white transition-all text-xs font-medium flex items-center justify-center gap-2 border border-dashed border-slate-600">
+                                                        {analyzingJudge ? <Icon path={icons.RefreshCw} className="animate-spin" size={12}/> : <Icon path={icons.MessageSquare} size={12}/>}
+                                                        {analyzingJudge ? "Consulting Rubric..." : "Ask AI Judge for Rationale"}
+                                                    </button>
+                                                )}
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <button onClick={() => handleReject(gatekeeperQueue[0].id)} className="py-3 rounded-lg border border-slate-600 text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/50 transition-all font-medium">Reject</button>
+                                                    <button onClick={() => handleApprove(gatekeeperQueue[0])} className="py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-purple-500/25 transition-all font-medium flex items-center justify-center gap-2">
+                                                        <Icon path={icons.Check} size={18}/> Approve VIP
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Logic Log */}
+                                            <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 text-sm font-mono text-slate-400 h-fit">
+                                                <div className="mb-4 text-xs uppercase text-slate-500 font-sans font-bold tracking-wider">Live Logic Log</div>
+                                                <div className="space-y-3">
+                                                    <p>&gt; New Application Received...</p>
+                                                    <p>&gt; Identifying Persona... <span className="text-purple-400">{gatekeeperQueue[0].type}</span></p>
+                                                    <p>&gt; Validating Organization... <span className="text-emerald-400">{gatekeeperQueue[0].org} (Verified)</span></p>
+                                                    <p>&gt; Analyzing Intent... <span className="text-slate-500 italic">"{gatekeeperQueue[0].applicationAnswer.substring(0, 25)}..."</span></p>
+                                                    <p>&gt; Calculating Score... <span className={gatekeeperQueue[0].score >= 60 ? "text-emerald-400" : "text-amber-400"}>Total: {gatekeeperQueue[0].score}/100</span></p>
+                                                    <div className="h-px bg-slate-800 my-2"></div>
+                                                    <p className="text-white">&gt; Recommendation: <span className="animate-pulse">{gatekeeperQueue[0].score >= 60 ? "IMMEDIATE ACCEPT" : "MANUAL REVIEW"}</span></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* --- VIEW 3: THE STEWARD --- */}
+                            {activeTab === 'steward' && (
+                                <div className="animate-fadeIn space-y-8">
+                                   <div className="grid grid-cols-12 gap-6">
+                                      <div className="col-span-8 grid grid-cols-3 gap-6">
+                                           <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+                                                <div className="flex items-center gap-3 mb-4 text-slate-400"><Icon path={icons.Users} size={20}/><span className="text-sm font-medium">Total Qualified</span></div>
+                                                <p className="text-4xl font-bold text-white">{metrics.qualified}</p>
+                                                <p className="text-xs text-emerald-400 mt-2 flex items-center gap-1"><Icon path={icons.TrendingUp} size={12}/> +12% this week</p>
+                                           </div>
+                                           <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+                                                <div className="flex items-center gap-3 mb-4 text-slate-400"><Icon path={icons.Mail} size={20}/><span className="text-sm font-medium">RSVP Rate</span></div>
+                                                <p className="text-4xl font-bold text-purple-400">{metrics.rsvpRate}</p>
+                                                <p className="text-xs text-slate-500 mt-2">Industry avg: 15%</p>
+                                           </div>
+                                           <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-4 opacity-10"><Icon path={icons.Users} size={64}/></div>
+                                                <div className="flex items-center gap-3 mb-4 text-slate-400"><Icon path={icons.Zap} size={20}/><span className="text-sm font-medium">Viral Loop</span></div>
+                                                <p className="text-4xl font-bold text-emerald-400">+{metrics.referrals}</p>
+                                                <p className="text-xs text-slate-500 mt-2">"Plus-One" Attendees</p>
+                                           </div>
+                                      </div>
+                                      <div className="col-span-4 h-full">
+                                         <LiveActivityFeed />
+                                      </div>
+                                   </div>
+                                   <ClusterMap attendees={vipAttendees} />
                                 </div>
                             )}
 
                         </section>
                     </main>
-
-                    {/* Modals */}
-                    {modalLead && <EmailModal lead={modalLead} onClose={() => setModalLead(null)} />}
-
                 </div>
             );
         };
 
+        // INITIALIZATION
         const root = createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
